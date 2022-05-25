@@ -7,10 +7,10 @@ Se da un problema y este es resuelto mediente dos algoritmos dando una tabla de 
 - notape: tiempo sin usar la evaluación automática
 - tape: tiempo usando la evaluación automática
 - ratio: tape/notape: el cociente
-- problem: <Problema>-N<Cantidad De Clientes>-K<??>
- - la primera letra es irrelevante
- - N: cantidad de clientes
- - K: rutas en la solución óptima
+- problem: \<Problema\>-N\<Cantidad De Clientes\>-K\<??\>
+  - la primera letra es irrelevante
+  - N: cantidad de clientes
+  - K: rutas en la solución óptima
 - criterion: Criterio de selección de vecindad
   - RAB: mover un cliente dentro de su ruta
   - RARB: mover un cliente para otra ruta (puede ser la misma)
