@@ -4,17 +4,26 @@ Se da un problema y este es resuelto mediente dos algoritmos dando una tabla de 
 
 ## Datos
 
-- notape: Tiempo de corrida sin grafo?
-- tape: Tiempo de corrida con grafo?
-- ratio: tape/notape
-- problem: Tipo de problema, tiene en su nombre la cantidad de clientes N-33/
-- criterion:
-- routes: Cantidad de rutas que se usaron en el problema
-- iterations:
-- clients: Cantidad de clientes en el problema?
-- maxroutes: Variable que indica si se hizo algo o no.
-- current:
-- total:
+- notape: tiempo sin usar la evaluación automática
+- tape: tiempo usando la evaluación automática
+- ratio: tape/notape: el cociente
+- problem: \<Problema\>-N\<Cantidad De Clientes\>-K\<??\>
+  - la primera letra es irrelevante
+  - N: cantidad de clientes
+  - K: rutas en la solución óptima
+- criterion: Criterio de selección de vecindad
+  - RAB: mover un cliente dentro de su ruta
+  - RARB: mover un cliente para otra ruta (puede ser la misma)
+  - RARAC: interacambiar dos clientes
+  - REF: mover una subruta dentro de su misma ruta
+  - RERF: mover una subruta para otra ruta (puede ser la misma)
+  - REREG: intercambiar dos subrutas
+- routes: cantidad de rutas en la solución inicial del algoritmo.
+- iterations: cantidad de iteraciones que hizo el algoritmo
+- clients: Cantidad de clientes en el problema
+- maxroutes: lo puedes ver como si la solución inicial es factible o no 🤷🏻‍♀️
+- current: esto es para llevar la cuenta de cuánto faltaba 🥵
+- total: el total de repeticiones que se hizo.
 
 ## Qué hizo Fernando
 
