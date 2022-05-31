@@ -38,9 +38,11 @@ Se da un problema y este es resuelto mediente dos algoritmos dando una tabla de 
 
 ## A Completar
 
-- [ ] Que significa la K en el nombre del problema? A-N22-K5
-- [ ] Preguntar por los campos uque significan
-
+- [ ] Poner los resultados de los .describe() en algún lado como valor extra
+- [ ] Hacer KNN
+  - Fijarse en routes con iterations
+- [ ] Hacer dendrograma
+- [ ] Mejorar Analisis de outliers
 
 ## Notas
 
