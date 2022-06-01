@@ -45,7 +45,37 @@ for col in data.columns:
         
 # Adding problem label
 data['problem_tag'] = data['problem'].apply(lambda x: x[0])
-data['optim_routes'] = data['problem'].apply(lambda x: x[x.index("K")+1:])
+data['optim_routes'] = data['problem'].apply(lambda x: int(x[x.index("K")+1:]))
+
+
+# %%
+# Mapear las variables categóricas a números
+categoricals_columns= ['problem','criterion']
+
+# fetch all values in problem column
+problem_values = list(set(data['problem'].values))
+criterion_values = list(set(data['criterion'].values))
+
+problem_values.sort()
+criterion_values.sort()
+
+# Por cada valor cambiarlo en el dataframe por su indice en la lista
+for problem in problem_values:
+    data['problem'].replace(problem, problem_values.index(problem), inplace=True)
+for criterion in criterion_values:
+    data['criterion'].replace(criterion, criterion_values.index(criterion), inplace=True)
+
+# Ordenar las columnas con 'tape' , 'notape' y 'ratio' como primeras
+columns = data.columns.values
+columns = np.append(['tape','notape','ratio'], columns[~np.in1d(columns, ['tape','notape','ratio'])])
+data = data[columns]
+
+# Eliminar columnas innecesarias para el analisis
+data.drop(columns=["current", "total"], inplace=True) # Current y total no se consideran necesarias
+
+# Convertir las variables categóricas en variables ficticias o dummies:
+
+# data = pd.get_dummies(data)
 
 
 # %%
@@ -66,11 +96,16 @@ def plot_boxplot(data, key:str):
 
 def plot_hist(data, key):
     sns.distplot(data[key])
-    
 
-def plot_corr_scatter_matrix(data, keys):
+def plot_qq(data, key):
+    stats.probplot(data[key], plot=plt)
+    plt.show()
+
+def plot_corr_scatter_matrix(data, keys, save_fig=None):
     sns.set()
     sns.pairplot(data[np.array(keys)], size=2.5)
+    if save_fig:
+        plt.savefig(save_fig)
     plt.show()
 
 def iqr(data, key):
@@ -105,7 +140,7 @@ def remove_outliers(data, key, remove_upper=True, remove_lower=True):
         base_data = base_data[~base_data.isin(get_outliers(data, key, False))]
     return base_data
 
-def plot_corr(df,size=10):
+def plot_corr(df, save_fig=None, size=10):
     """
     Function plots a graphical correlation matrix
     for each pair of columns in the dataframe.
@@ -117,7 +152,8 @@ def plot_corr(df,size=10):
 
     corr = df.corr()
     corr.style.background_gradient(cmap='coolwarm').set_precision(2)
-    fig, ax = plt.subplots(figsize=(size+size/2.0, size))
+    fig, ax = plt.subplots(figsize=(size+size/2, size))
+    
     # ax.matshow(corr)
     # plt.xticks(range(len(corr.columns)), corr.columns)
     # plt.yticks(range(len(corr.columns)), corr.columns)
@@ -126,47 +162,42 @@ def plot_corr(df,size=10):
             cmap='coolwarm',
             annot=True,
             )
-
-def plot_scatter_matrix(data, keys:tuple):
-    pd.plotting.scatter_matrix(data.loc[:,keys])
     
-def anova(data, factor, objetive, alpha=0.1):
-    # TODO Check for assumptions
+    if save_fig:
+        plt.savefig(save_fig)
+
+def plot_scatter_matrix(data, keys:tuple, save_fig=None):
+    pd.plotting.scatter_matrix(data.loc[:,keys])
+    if save_fig:
+        plt.savefig(save_fig)
+    
+def plot_grouped_by_boxplot(data, objective, groupby_keys, save_fig=None, **kwargs):
+    df = pd.DataFrame({str(k): value[objective] for k,value in data[groupby_keys + [objective]].groupby(groupby_keys)})
+    df.plot(kind='box', title=f"{objective} boxplot grouped by {', '.join(groupby_keys)}", **kwargs)
+    if save_fig:
+        plt.savefig(save_fig)
+    plt.show()
+    
+def test_anova(data, factor, objective, alpha=0.1):
     import scipy.stats as stats
     levels = set(data[factor])
-    levels = [data[objetive][data[factor] == level] for level in levels]
+    levels = [data[objective][data[factor] == level] for level in levels]
     result = stats.f_oneway(*levels)
     if result.pvalue < alpha:
         # H0 is rejected
-        print(f"ANOVA: {factor} influences {objetive}")
+        print(f"ANOVA: {factor} influences {objective}")
     else:
-        print(f"ANOVA: {factor} does not influences {objetive}")
+        print(f"ANOVA: {factor} does not influences {objective}")
     print(result.pvalue)
 
-
-# %%
-p1 = data[data['problem'] == "A-N32-K5"]
-p1.head()
-
-
-# Resumen de estadística descriptiva:
-describe(data)
-
-
-# %%
-# Histograma:
-
-sns.distplot(data['ratio'])
-
-# plot_corr(data)
-# get_outliers(data, 'ratio').describe()
-# get_outliers(data, 'ratio', False).describe()
-
-# remove_outliers(data, "ratio").describe()
-# data.describe()
-# plot_corr(data)
-# plot_scatter_matrix(data, ('notape', 'tape'))
-# anova(data, "problem", "ratio")
+def test_normal_dstribution(data, key, alpha=0.1):
+    _, pvalue = stats.shapiro(data[key])
+    if pvalue > alpha:
+        print(f"Shappiro test on {key}: Probably Gaussian with pvalue {pvalue}")
+        return True
+    else:
+        print(f"Shappiro test on {key}: Probably NOT Gaussian with pvalue {pvalue}")
+        return False
 
 
 # %%
@@ -175,32 +206,178 @@ sns.distplot(data['ratio'])
 print("Skewness: %f" % data['ratio'].skew())
 print("Kurtosis: %f" % data['ratio'].kurt())
 
+# %% [markdown]
+# ## Correlación
 
 # %%
-# Matriz de correlación:
+# Todos los datos
 
-#plot_corr(data)
-data1= data.drop(['current','total','notape','ratio'], axis=1)
+corr_data = data.drop("criterion", axis=1)
 
-plot_corr(data1)
+plot_corr(corr_data, save_fig="images/correlation.png")
+plot_corr_scatter_matrix(corr_data, corr_data.columns, save_fig="images/correlation_scatter.png")
+
+# %% [markdown]
+# ## Outliers
+
+# %%
+# Outliers TODO
+
+corr_data = data.drop("criterion", axis=1)
+
+## ratio
+upper_ratio_outliers = get_outliers(corr_data, 'ratio')
+lower_ratio_outliers = get_outliers(corr_data, 'ratio', False)
+no_ratio_outliers = remove_outliers(corr_data, "ratio")
+
+print("Upper ratio outliers")
+print(upper_ratio_outliers.describe())
+
+print("Lower ratio outliers")
+print(lower_ratio_outliers.describe())
+
+print("No ratio outliers")
+print(no_ratio_outliers.describe())
+
+test_normal_dstribution(data, "ratio")
+
+plot_corr(no_ratio_outliers, save_fig="images/correlation_no_ratio_outliers.png")
+plot_corr_scatter_matrix(no_ratio_outliers, no_ratio_outliers.columns, save_fig="images/correlation_scatter_no_ratio_outliers.png")
+
+plot_corr(upper_ratio_outliers, save_fig="images/correlation_upper_ratio_outliers.png")
+plot_corr_scatter_matrix(upper_ratio_outliers, corr_data.columns, save_fig="images/correlation_scatter_upper_ratio_outliers.png")
 
 
 # %%
-# Scatter plot:
-plot_corr_scatter_matrix(data1, data1.columns.values)
+# No outliers TODO
+
+# corr_data = data.drop("criterion", axis=1)
+
+# plot_corr(corr_data, save_fig="images/correlation.png")
+# plot_corr_scatter_matrix(corr_data, corr_data.columns, save_fig="images/correlation_scatter.png")
+
+# %% [markdown]
+# # Clustering
+# 
+# Trying K-Mean to make clusters and visualize data
+
+# %%
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.metrics import silhouette_score
+ 
+
+def plot_elbow(data, cluster_range:tuple=(2,20)):
+    inertias = []
+    for i in range(*cluster_range):
+        kmeans = KMeans(n_clusters=i)
+        kmeans.fit(data)
+        inertias.append(kmeans.inertia_)
+        # print(f"Silhouette with {i} clusters: {silhouette_score(data, kmeans.labels_)}")
+    
+    plt.plot(range(*cluster_range), inertias)
+    plt.title("Elbow curve")
+    plt.show()
+
+def kmeans(data, clusters:int, x_label=None, y_label=None):
+    """
+    Returns the scaled data annotaed with clusters labels
+    """
+    scaler = MinMaxScaler() # StandardScaler()
+    scale = scaler.fit_transform(data)
+    scale = pd.DataFrame(scale, columns=data.columns)
+    
+    model = KMeans(n_clusters=clusters) # DBSCAN(eps=??, min_samples=??)
+    clusters = model.fit_predict(scale)
+    
+    scale["clusters"] = clusters
+    return scale
+
+def plot_kmeans_clusters(data, labels:tuple):
+    """
+    Plots the `labels` annotated with `clusters` in data.
+    """
+    if len(labels) == 2:
+        sns.scatterplot(x=labels[0], y=labels[1], hue = 'clusters',  data=data, palette='viridis')
+        plt.show()
+    if len(labels) == 3:
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure(figsize=(4,4))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel(labels[0])
+        ax.set_ylabel(labels[1])
+        ax.set_zlabel(labels[2])
+        ax.set_title("Cluster of " + ", ".join(labels))
+
+        scat_plot = ax.scatter(data[labels[0]],data[labels[1]],data[labels[2]], c=data['clusters'])
+        plt.show()
+
+non_obj = data.drop([col for col in data.columns if data[col].dtype == 'O'], axis=1)
+
+# Plotting elbow 
+plot_elbow(non_obj[keys])
+
+# Elbow method shows that 7-8 clusters are a good choice
+labeled_normalized_data = kmeans(non_obj, 7)
 
 
 # %%
-# Grouping data
+# Plotting results
+# TODO Try with different choices to see what happens
+keys = ["routes", "iterations", "clients"]
+plot_kmeans_clusters(labeled_normalized_data, keys)
 
-d = data.groupby(["problem", "criterion"])
-
-for name, group in d:
-    print(name)
-    print(group)
-
+# %% [markdown]
+# ## ratio <= 1
 
 # %%
+low_ratio_data = data[data["ratio"] <= 1]
 
+print(low_ratio_data.describe())
+
+plot_corr_scatter_matrix(low_ratio_data, low_ratio_data.columns, save_fig="images/correlation_scatter_ratio_lower_than1.png")
+
+# %% [markdown]
+# ## Client Analysis
+
+# %%
+# Grouping by number of clients and computing the mean for each group
+remove_out = remove_outliers(data, "ratio")
+
+computed = remove_out[["clients", "tape", "notape", "ratio"]].groupby(["clients"]).mean()
+print(computed.index)
+plt.plot(computed.index, computed["ratio"], label="ratio")
+plt.xlabel("clients")
+plt.ylabel("mean of ratio")
+plt.legend()
+plt.savefig("images/mean_decreasing_ratio.png")
+plt.show()
+plt.plot(computed.index, computed["tape"], label="tape")
+plt.plot(computed.index, computed["notape"], label="notape")
+plt.xlabel("clients")
+plt.ylabel("mean of tape/notape")
+plt.legend()
+plt.savefig("images/mean_running_time.png")
+plt.show()
+
+plot_grouped_by_boxplot(remove_out, "ratio", ["clients"], save_fig="images/boxplot_ratio_groupedby_clients")
+# plot_grouped_by_boxplot(data, "routes", ["clients"])
+# plot_grouped_by_boxplot(data, "tape", ["clients"])
+# plot_grouped_by_boxplot(data, "notape", ["clients"])
+
+plt.scatter(remove_out["clients"], remove_out["ratio"])
+plt.show()
+
+# %% [markdown]
+# ## Criterion analysis
+
+# %%
+for cr in set(data["criterion"]):
+    print("testing anova with criterion", cr)
+    anova_data = data[data["criterion"] == cr]
+    print(len(anova_data))
+    test_anova(anova_data, "criterion", "ratio")
+
+plot_grouped_by_boxplot(data, "ratio", ["criterion", "clients"], save_fig="images/boxplot_ratio_groupedby_criterion_cients.png", figsize=(22,3))
 
 
