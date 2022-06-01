@@ -38,9 +38,9 @@ Se da un problema y este es resuelto mediente dos algoritmos dando una tabla de 
 
 ## A Completar
 
-- [ ] Que significa la K en el nombre del problema? A-N22-K5
-- [ ] Preguntar por los campos uque significan
-
+- [ ] Hacer analisis por tape y notape y luego uno conjunto.
+- [ ] Agrupar los datos por problemas que tengan caracteristicas similares para ver como se comportan los tiempos ahi
+- [ ] Agrupar los datos por caracteristicas similares que se pueda ver el cambio a medida de que aumente la cantidad de clientes, rutas, etc.
 
 ## Notas
 
