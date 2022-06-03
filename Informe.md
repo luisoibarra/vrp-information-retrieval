@@ -4,7 +4,8 @@
 
 ## Correlación
 
-![Correlación](images/correlation.png)
+![Correlación](images/correlation_no_ratio_outliers.png)
+![Graficos 2 a 2](images/correlation_scatter_no_ratio_outliers.png)
 
 Algunas correlaciones presentes
 
@@ -14,7 +15,7 @@ Algunas correlaciones presentes
 
 **Media** correlación directa entre:
 
-- *iterations* y *clients*: Es lógico pensar que para problemas de mayor espacio de búsqueda la cantidad de iteraciones realiadas por los algoritmos sea mayor.
+- *iterations* y *clients*: Es lógico pensar que para problemas de mayor espacio de búsqueda la cantidad de iteraciones realizadas por los algoritmos sea mayor.
 - *clients* y *routes*: Lo cual siguiendo la linea de pensamiento anterior, tiene sentido que a mayor cantidad de clientes exista una mayor cantidad de rutas.
 - *routes* y *maxroutes*: Se puede pensar como que empezando por una solución factible (maxroutes=1) inicial los
 algoritmos tienden a hacer más iteraciones que empezando por una solución no factible (maxroutes=0)
@@ -25,7 +26,7 @@ algoritmos tienden a hacer más iteraciones que empezando por una solución no f
 
 ## Análisis de ratio <= 1
 
-Dado que los que cumplen este criterio cumplen que la corrida con evaluación automática fue mejor o igual que la corrida sin esta tiene significancia ver que propiedades cumplen este grupo.
+Dado que los que cumplen este criterio cumplen que la corrida con evaluación automática fue mejor o igual que la corrida sin esta, tiene significancia ver que propiedades cumplen este grupo.
 
 En este grupo se encontraron 40 entradas, lo que representa un 1.6% de la muestra.
 
@@ -35,7 +36,7 @@ Entre las características que presentan dichas corridas se encuentran:
 - La mayoría empezó con una solución inicial factible.
 - La mayoría se realizaron en menos de 25 iteraciones.
 - La mayoría se realizaron con menos de 50 clientes.
-- El criterio 0 (TODO poner nombre) fue el más observado.
+- El criterio RAB fue el más observado.
 
 ![images/correlation_scatter_ratio_lower_than1.png](images/correlation_scatter_ratio_lower_than1.png)
 
@@ -60,13 +61,15 @@ Aunque solamente se tiene medida de 32, 33, 37, 65, 80, 135 clientes respectivam
 
 ## Análisis de criterion
 
-El análisis del criterio indica que individualmente no inlfuye en el ratio. Se realizó un test de ANOVA sobre colecciones con el mismo criterio dando como resultado que este no tenia inlfuencia sobre el valor del ratio.
+El análisis del criterio indica que individualmente no influye en el ratio. Se realizó un test de ANOVA sobre la colección dando como resultado que este no tenia influencia sobre el valor del ratio.
 
-Aumentando nuestro análisis sobre este tema se investigó si la cantidad de clientes y el criterio afectaban el radio llegando a la conclusión de que iba disminuyendo la media a medida que aumentaba la cantidad de clientes, reforzando lo mostrado anteriormente:
+Aumentando nuestro análisis sobre este tema se investigó si la cantidad de clientes y el criterio afectaban el ratio llegando a la conclusión de que iba disminuyendo la media a medida que aumentaba la cantidad de clientes, reforzando lo mostrado anteriormente:
 
 ![images/boxplot_ratio_groupedby_criterion_cients.png](images/boxplot_ratio_groupedby_criterion_cients.png)
 
 En la imagen se observa en el eje x una tupla que representa (criterio, cantidad de clientes) por donde se filtraron los ratios para hallarle el boxplot. Se observa un leve descenso con el aumento de los clientes.
+
+Además de que los criterios 1,3,4 y 5 poseen una menor varianza en cuanto al ratio, independientemente de la cantidad de clientes.
 
 ## Recomendaciones
 
