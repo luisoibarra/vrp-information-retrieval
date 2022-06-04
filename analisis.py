@@ -3,6 +3,35 @@
 # %%
 from IPython import get_ipython
 
+# %% [markdown]
+# # Análisis de los datos
+# 
+# El objetivo del análisis de los datos es encontrar información acerca del comportamiento de las corridas de problemas con evaluación automática y sin esta.
+# 
+# ## Datos
+# 
+# - notape: tiempo sin usar la evaluación automática.
+# - tape: tiempo usando la evaluación automática.
+# - ratio: tape/notape: el cociente.
+# - problem: \<Problema\>-N\<Cantidad De Clientes\>-K\<Rutas Sol Opt\>.
+#   - la primera letra es irrelevante.
+#   - N: cantidad de clientes.
+#   - K: rutas en la solución óptima.
+# - criterion: Criterio de selección de vecindad.
+#   - RAB: mover un cliente dentro de su ruta.
+#   - RARB: mover un cliente para otra ruta (puede ser la misma).
+#   - RARAC: interacambiar dos clientes.
+#   - REF: mover una subruta dentro de su misma ruta.
+#   - RERF: mover una subruta para otra ruta (puede ser la misma).
+#   - REREG: intercambiar dos subrutas.
+# - routes: cantidad de rutas en la solución inicial del algoritmo.
+# - iterations: cantidad de iteraciones que hizo el algoritmo.
+# - clients: Cantidad de clientes en el problema.
+# - maxroutes: lo puedes ver como si la solución inicial es factible o no.
+# - current: esto es para llevar la cuenta de cuánto faltaba.
+# - total: el total de repeticiones que se hizo.
+# 
+
 # %%
 # Importo las bibliotecas básicas:
 
@@ -17,13 +46,21 @@ import warnings
 warnings.filterwarnings('ignore')  # Para evitar los molestos avisos.
 get_ipython().run_line_magic('matplotlib', 'inline')
 
+# %% [markdown]
+# ## Lectura de Datos
+# 
+# Se leyeron los datos y se realizó una limpieza de los mismos:
+# - Se eliminaron las corridas que dieron error. (No se encontró ninguna en el conjnto de datos)
+# - Se arreglaron los nombres de las columnas y las variables categóricas, ya que tenían espacios al principio o al final
+# - Se anotaron otros datos codificados en el nombre del problema como la letra del problema y la cantidad de rutas óptimas
+# - Se convirtieron las variables Categóricas en Numéricas.
+# - Se eliminaron columnas innecesarias en el análisis
+# 
 
 # %%
 # Read data
 data = pd.read_csv('datos.csv')
 
-
-# %%
 # Clean data
 
 # Problems with errors
@@ -47,8 +84,6 @@ for col in data.columns:
 data['problem_tag'] = data['problem'].apply(lambda x: x[0])
 data['optim_routes'] = data['problem'].apply(lambda x: int(x[x.index("K")+1:]))
 
-
-# %%
 # Mapear las variables categóricas a números
 categoricals_columns= ['problem','criterion']
 
@@ -94,8 +129,10 @@ def plot_boxplot(data, key:str):
     plt.legend([key])
     plt.show()
 
-def plot_hist(data, key):
+def plot_hist(data, key, save_fig=None):
     sns.distplot(data[key])
+    if save_fig:
+        plt.savefig(save_fig)
 
 def plot_qq(data, key):
     stats.probplot(data[key], plot=plt)
@@ -199,15 +236,50 @@ def test_normal_dstribution(data, key, alpha=0.1):
         print(f"Shappiro test on {key}: Probably NOT Gaussian with pvalue {pvalue}")
         return False
 
+# %% [markdown]
+# ## Medidas básicas
+# 
+# ### Asimetría y Curtosis de ratio
+# 
+# La asimetría (Skewness) de la variable **ratio** tiene un valor de 1.7. Esto indica que la distribución no es simétrica y que posee una tendencia a dar más valores mayores que menores con respecto a la moda. También indica la posible existencia de outliers superiores.
+# 
+# La curtosis (Kurtosis) de la variable **ratio** tiene un valor de 15.2. Esto indica que la destribución de los ratios no presenta una desviación estándar grande y que por lo tanto la existencia de outliers no es mucha.
+# 
+# Estas observaciones se pueden ver en el histograma del **ratio**
+# 
+# ![images/hist_ratio.png](images/hist_ratio.png)
+# 
 
 # %%
 # Asimetría y curtosis:
 
 print("Skewness: %f" % data['ratio'].skew())
 print("Kurtosis: %f" % data['ratio'].kurt())
+plot_hist(data, "ratio", "images/hist_ratio.png")
+
+data.describe()
 
 # %% [markdown]
 # ## Correlación
+# 
+# ![Correlación](images/correlation.png)
+# 
+# Algunas correlaciones presentes
+# 
+# **Alta** correlación directa entre:
+# 
+# - *tape* y *notape*: Ambos representan tiempos de corrida de algoritmos al mismo problema. Esto indica que el análisis en esta matriz relacionados va a ser casi idéntico.
+# 
+# **Media** correlación directa entre:
+# 
+# - *iterations* y *clients*: Es lógico pensar que para problemas de mayor espacio de búsqueda la cantidad de iteraciones realiadas por los algoritmos sea mayor.
+# - *clients* y *routes*: Lo cual siguiendo la linea de pensamiento anterior, tiene sentido que a mayor cantidad de clientes exista una mayor cantidad de rutas.
+# - *routes* y *maxroutes*: Se puede pensar como que empezando por una solución factible (maxroutes=1) inicial los
+# algoritmos tienden a hacer más iteraciones que empezando por una solución no factible (maxroutes=0)
+# 
+# **Débil** correlación inversa entre:
+# 
+# - *ratio* y *routes*: Al parecer existe una relación no muy marcada entre estos dos atributos que hace que a medida que aumente las rutas en la solución inicial del problema tiende a disminuir el ratio.
 
 # %%
 # Todos los datos
@@ -218,10 +290,20 @@ plot_corr(corr_data, save_fig="images/correlation.png")
 plot_corr_scatter_matrix(corr_data, corr_data.columns, save_fig="images/correlation_scatter.png")
 
 # %% [markdown]
-# ## Outliers
+# ## Análisis Outliers
+# 
+# Se eliminaron los outliers del atributo ratio por el método de IQR, estos datos representan solamente 15 entradas siendo todos superiores, no llegando al 1% de la muestra.
+# 
+# En los outliers se muestra la siguiente tabla de correlación, aunque esta no tiene mucha significación estadística por la poca cantidad de elementos que la conforman da a conocer información sobre estos.
+# 
+# ![images/correlation_upper_ratio_outliers.png](images/correlation_upper_ratio_outliers.png)
+# 
+# En estos datos aparecieron nuevas correlaciones con respecto al ratio, aunque débiles, por ejemplo la correlación inversa entre el ratio y las iterations.
+# 
+# Eliminando los outliers de la muestra la distribución de los ratios se hace normal, según la prueba de Shapiro-Wilks.
 
 # %%
-# Outliers TODO
+# Outliers
 
 corr_data = data.drop("criterion", axis=1)
 
@@ -239,7 +321,10 @@ print(lower_ratio_outliers.describe())
 print("No ratio outliers")
 print(no_ratio_outliers.describe())
 
+print("All data")
 test_normal_dstribution(data, "ratio")
+print("No outliers")
+test_normal_dstribution(no_ratio_outliers, "ratio")
 
 plot_corr(no_ratio_outliers, save_fig="images/correlation_no_ratio_outliers.png")
 plot_corr_scatter_matrix(no_ratio_outliers, no_ratio_outliers.columns, save_fig="images/correlation_scatter_no_ratio_outliers.png")
@@ -247,14 +332,90 @@ plot_corr_scatter_matrix(no_ratio_outliers, no_ratio_outliers.columns, save_fig=
 plot_corr(upper_ratio_outliers, save_fig="images/correlation_upper_ratio_outliers.png")
 plot_corr_scatter_matrix(upper_ratio_outliers, corr_data.columns, save_fig="images/correlation_scatter_upper_ratio_outliers.png")
 
+# %% [markdown]
+# ## Análisis de ratio <= 1
+# 
+# Dado que los que cumplen este criterio cumplen que la corrida con evaluación automática fue mejor o igual que la corrida sin esta tiene significancia ver que propiedades cumplen este grupo.
+# 
+# En este grupo se encontraron 40 entradas, lo que representa un 1.6% de la muestra.
+# 
+# Entre las características que presentan dichas corridas se encuentran:
+# 
+# - La mayoría de los ratios se encuentra próximos a 1.
+# - La mayoría empezó con una solución inicial factible.
+# - La mayoría se realizaron en menos de 25 iteraciones.
+# - La mayoría se realizaron con menos de 50 clientes.
+# - El criterio 0 (TODO poner nombre) fue el más observado.
+# 
+# ![images/correlation_scatter_ratio_lower_than1.png](images/correlation_scatter_ratio_lower_than1.png)
+# 
 
 # %%
-# No outliers TODO
+low_ratio_data = data[data["ratio"] <= 1]
 
-# corr_data = data.drop("criterion", axis=1)
+print(low_ratio_data.describe())
 
-# plot_corr(corr_data, save_fig="images/correlation.png")
-# plot_corr_scatter_matrix(corr_data, corr_data.columns, save_fig="images/correlation_scatter.png")
+plot_corr_scatter_matrix(low_ratio_data, low_ratio_data.columns, save_fig="images/correlation_scatter_ratio_lower_than1.png")
+
+# %% [markdown]
+# ## Análisis de clients
+# 
+# Se observa un ligero comportamiento decreciente en el **ratio** a medida que aumenta la cantidad de clientes.
+# Aunque solamente se tiene medida de 32, 33, 37, 65, 80, 135 clientes respectivamente.
+# 
+# ![images/boxplot_ratio_groupedby_clients.png](images/boxplot_ratio_groupedby_clients.png)
+# 
+# ![images/mean_decreasing_ratio.png](images/mean_decreasing_ratio.png)
+# 
+
+# %%
+# Grouping by number of clients and computing the mean for each group
+remove_out = remove_outliers(data, "ratio")
+
+computed = remove_out[["clients", "tape", "notape", "ratio"]].groupby(["clients"]).mean()
+print(computed.index)
+plt.plot(computed.index, computed["ratio"], label="ratio")
+plt.xlabel("clients")
+plt.ylabel("mean of ratio")
+plt.legend()
+plt.savefig("images/mean_decreasing_ratio.png")
+plt.show()
+plt.plot(computed.index, computed["tape"], label="tape")
+plt.plot(computed.index, computed["notape"], label="notape")
+plt.xlabel("clients")
+plt.ylabel("mean of tape/notape")
+plt.legend()
+plt.savefig("images/mean_running_time.png")
+plt.show()
+
+plot_grouped_by_boxplot(remove_out, "ratio", ["clients"], save_fig="images/boxplot_ratio_groupedby_clients")
+# plot_grouped_by_boxplot(data, "routes", ["clients"])
+# plot_grouped_by_boxplot(data, "tape", ["clients"])
+# plot_grouped_by_boxplot(data, "notape", ["clients"])
+
+plt.scatter(remove_out["clients"], remove_out["ratio"])
+plt.show()
+
+# %% [markdown]
+# ## Análisis de criterion
+# 
+# El análisis del criterio indica que individualmente no influye en el ratio. Se realizó un test de ANOVA sobre colecciones con el mismo criterio dando como resultado que este no tenía influencia sobre el valor del ratio.
+# 
+# Aumentando nuestro análisis sobre este tema se investigó si la cantidad de clientes y el criterio afectaban el radio llegando a la conclusión de que iba disminuyendo la media a medida que aumentaba la cantidad de clientes, reforzando lo mostrado anteriormente:
+# 
+# ![images/boxplot_ratio_groupedby_criterion_cients.png](images/boxplot_ratio_groupedby_criterion_cients.png)
+# 
+# En la imagen se observa en el eje x una tupla que representa (criterio, cantidad de clientes) por donde se filtraron los ratios para hallarle el boxplot. Se observa un leve descenso con el aumento de los clientes.
+# 
+
+# %%
+for cr in set(data["criterion"]):
+    print("testing anova with criterion", cr)
+    anova_data = data[data["criterion"] == cr]
+    print(len(anova_data))
+    test_anova(anova_data, "criterion", "ratio")
+
+plot_grouped_by_boxplot(data, "ratio", ["criterion", "clients"], save_fig="images/boxplot_ratio_groupedby_criterion_cients.png", figsize=(22,3))
 
 # %% [markdown]
 # # Clustering
@@ -314,6 +475,8 @@ def plot_kmeans_clusters(data, labels:tuple):
 
 non_obj = data.drop([col for col in data.columns if data[col].dtype == 'O'], axis=1)
 
+keys = ["routes", "iterations", "clients"]
+
 # Plotting elbow 
 plot_elbow(non_obj[keys])
 
@@ -324,60 +487,6 @@ labeled_normalized_data = kmeans(non_obj, 7)
 # %%
 # Plotting results
 # TODO Try with different choices to see what happens
-keys = ["routes", "iterations", "clients"]
 plot_kmeans_clusters(labeled_normalized_data, keys)
-
-# %% [markdown]
-# ## ratio <= 1
-
-# %%
-low_ratio_data = data[data["ratio"] <= 1]
-
-print(low_ratio_data.describe())
-
-plot_corr_scatter_matrix(low_ratio_data, low_ratio_data.columns, save_fig="images/correlation_scatter_ratio_lower_than1.png")
-
-# %% [markdown]
-# ## Client Analysis
-
-# %%
-# Grouping by number of clients and computing the mean for each group
-remove_out = remove_outliers(data, "ratio")
-
-computed = remove_out[["clients", "tape", "notape", "ratio"]].groupby(["clients"]).mean()
-print(computed.index)
-plt.plot(computed.index, computed["ratio"], label="ratio")
-plt.xlabel("clients")
-plt.ylabel("mean of ratio")
-plt.legend()
-plt.savefig("images/mean_decreasing_ratio.png")
-plt.show()
-plt.plot(computed.index, computed["tape"], label="tape")
-plt.plot(computed.index, computed["notape"], label="notape")
-plt.xlabel("clients")
-plt.ylabel("mean of tape/notape")
-plt.legend()
-plt.savefig("images/mean_running_time.png")
-plt.show()
-
-plot_grouped_by_boxplot(remove_out, "ratio", ["clients"], save_fig="images/boxplot_ratio_groupedby_clients")
-# plot_grouped_by_boxplot(data, "routes", ["clients"])
-# plot_grouped_by_boxplot(data, "tape", ["clients"])
-# plot_grouped_by_boxplot(data, "notape", ["clients"])
-
-plt.scatter(remove_out["clients"], remove_out["ratio"])
-plt.show()
-
-# %% [markdown]
-# ## Criterion analysis
-
-# %%
-for cr in set(data["criterion"]):
-    print("testing anova with criterion", cr)
-    anova_data = data[data["criterion"] == cr]
-    print(len(anova_data))
-    test_anova(anova_data, "criterion", "ratio")
-
-plot_grouped_by_boxplot(data, "ratio", ["criterion", "clients"], save_fig="images/boxplot_ratio_groupedby_criterion_cients.png", figsize=(22,3))
 
 
